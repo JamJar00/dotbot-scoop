@@ -17,7 +17,7 @@ class Scoop(dotbot.Plugin):
         app_success = True
 
         if 'buckets' in data:
-            for bucket, options in data['buckets'].items():
+            for bucket in data['buckets']:
                 try:
                     command = ['scoop bucket add', bucket]
 
@@ -34,7 +34,7 @@ class Scoop(dotbot.Plugin):
                 self._log.error('Some buckets were not successfully added')
 
         if 'apps' in data:
-            for app, options in data['apps'].items():
+            for app in data['apps']:
                 try:
                     command = ['scoop install', app]
 

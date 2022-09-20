@@ -11,7 +11,7 @@ Largely based on the [snap plugin](https://github.com/DrDynamic/dotbot-snap.git)
 git submodule add https://github.com/JamJar00/dotbot-scoop.git
 ```
 
-2. Pass this folder (or directly snap.py file) path with corresponding flag to your [Dotbot][dotbot_repo] script:
+2. Pass this folder (or directly scoop.py file) path with corresponding flag to your [Dotbot][dotbot_repo] script:
   - `-p /path/to/file/scoop.py`
 
   or
