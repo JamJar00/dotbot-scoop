@@ -1,6 +1,6 @@
 [dotbot_repo]: https://github.com/anishathalye/dotbot
 
-## Dotbot `snap` Plugin
+## Dotbot `scoop` Plugin
 Plugin for [Dotbot][dotbot_repo], that adds the `scoop` directive, which allows you to install scoop packages 
 
 Largely based on the [snap plugin](https://github.com/DrDynamic/dotbot-snap.git) for the same purpose.
@@ -12,7 +12,7 @@ git submodule add https://github.com/JamJar00/dotbot-scoop.git
 ```
 
 2. Pass this folder (or directly snap.py file) path with corresponding flag to your [Dotbot][dotbot_repo] script:
-  - `-p /path/to/file/snap.py`
+  - `-p /path/to/file/scoop.py`
 
   or
 
