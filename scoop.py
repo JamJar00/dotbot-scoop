@@ -24,7 +24,7 @@ class Scoop(dotbot.Plugin):
 
     def _add_missing_buckets(self, desired, installed):
         to_install = desired.difference(installed)
-        self._log.info(f'Installing buckets {", ".join(to_install)}')
+        self._log.debug(f'Installing buckets [{", ".join(to_install)}]')
 
         success = True
         for bucket in to_install:
@@ -43,7 +43,7 @@ class Scoop(dotbot.Plugin):
 
     def _add_missing_apps(self, desired, installed):
         to_install = desired.difference(installed)
-        self._log.info(f'Installing apps {", ".join(to_install)}')
+        self._log.debug(f'Installing apps [{", ".join(to_install)}]')
 
         success = True
         for app in to_install:
@@ -73,7 +73,8 @@ class Scoop(dotbot.Plugin):
         if not manifest:
             return False
         (installed_buckets, installed_apps) = manifest
-        self._log.debug(f'Found buckets {", ".join(installed_buckets)} already configured and apps {", ".join(installed_apps)} already installed')
+        self._log.debug(f'Found buckets [{", ".join(installed_buckets)}] already configured and apps [{", ".join(installed_apps)}] already installed')
+        self._log.debug(f'Aiming for buckets [{", ".join(set(data["buckets"]))}] to be configured and apps [{", ".join(set(data["apps"]))}] to be installed')
 
         if 'buckets' in data:
             add_missing_bucket_success = self._add_missing_buckets(set(data['buckets']), set(installed_buckets))
@@ -93,12 +94,12 @@ class Scoop(dotbot.Plugin):
         if not new_manifest:
             return False
         (new_installed_buckets, new_installed_apps) = new_manifest
-        self._log.debug(f'New installed set of buckets {", ".join(new_installed_buckets)} and apps {", ".join(new_installed_apps)}')
+        self._log.debug(f'New installed set of buckets [{", ".join(new_installed_buckets)}] and apps [{", ".join(new_installed_apps)}]')
 
         if 'buckets' in data:
-            add_missing_bucket_success &= set(new_installed_buckets) == set(data['buckets'])
+            add_missing_bucket_success &= set(new_installed_buckets).issuperset(set(data['buckets']))
         if 'apps' in data:
-            add_missing_app_success &= set(new_installed_apps) == set(data['apps'])
+            add_missing_app_success &= set(new_installed_apps).issuperset(set(data['apps']))
 
         if add_missing_bucket_success:
             self._log.info('All buckets have been added')
