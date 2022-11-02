@@ -90,9 +90,9 @@ class Scoop(dotbot.Plugin):
 
         # Scoop doesn't return useful exit codes (booo) so get a manifest again and see if it actually added the bucket
         new_manifest = self._manifest()
-        if not manifest:
+        if not new_manifest:
             return False
-        (new_installed_buckets, new_installed_apps) = manifest
+        (new_installed_buckets, new_installed_apps) = new_manifest
         self._log.debug(f'New installed set of buckets {", ".join(new_installed_buckets)} and apps {", ".join(new_installed_apps)}')
 
         if 'buckets' in data:

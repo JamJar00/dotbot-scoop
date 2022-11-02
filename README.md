@@ -37,3 +37,7 @@ git submodule add https://github.com/JamJar00/dotbot-scoop.git
 ```bash
 "~/.dotfiles/bin/dotbot" -d "~/.dotfiles" -c "~/.dotfiles/packages.yaml" -p "~/.dotfiles/plugins/dotbot-scoop/scoop.py"
 ```
+
+### Troubleshooting
+If it fails run `./install -v` to see more info
+If the more info just says `Extra data: line 1 column 2 (char 1)` your scoop is old, run `scoop update`
