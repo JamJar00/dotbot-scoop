@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "dotbot-scoop"
+version = "0.1.0"
+description = ""
+authors = ["Jamie Read <hey@jread.dev>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "dotbot_scoop"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+
+[tool.poetry.group.dev.dependencies]
+pylama = "^8.4.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
