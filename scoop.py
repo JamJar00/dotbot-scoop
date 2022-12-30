@@ -24,76 +24,119 @@ class Bucket:
             return self.name
 
 
+class App:
+    def __init__(self, name):
+        self.name = name
+
+
+    def __eq__(self, other):
+        if isinstance(other, App):
+            return self.name == other.name
+        else:
+            return False
+
+
+    def __hash__(self):
+        return hash(self.name)
+
+
+    def __str__(self):
+        return self.name
+
+
+def _parse_buckets_config(buckets):
+    if buckets is None:
+        return []
+
+    parsed_buckets = []
+    for bucket in buckets:
+        if isinstance(bucket, str):
+            parsed_buckets.append(Bucket(bucket))
+        else:
+            parsed_buckets.append(Bucket(bucket["name"], bucket["repo"]))
+    return parsed_buckets
+
+
+def _parse_apps_config(apps):
+    if apps is None:
+        return []
+
+    parsed_apps = []
+    for app in apps:
+        parsed_apps.append(App(app))
+    return parsed_apps
+
+
+def _diff(desired, installed):
+    return set(desired).difference(set(installed))
+
+
+def _verify(desired, installed):
+    return set(installed).issuperset(set(desired))
+
+
 class Scoop(dotbot.Plugin):
     _directive = 'scoop'
 
+
     def _manifest(self):
+        command = 'scoop export'
         try:
             res = subprocess.run(
-                    'scoop export',
+                    command,
                     shell=True,
                     check=True,
                     stdout=subprocess.PIPE)
             manifest = json.loads(res.stdout)
         except subprocess.CalledProcessError:
-            self._log.error('Unable to extract manifest from scoop')
+            self._log.error(f'Unable to extract manifest from scoop running command "{command}"')
             return False
 
         buckets = [Bucket(bucket["Name"], bucket["Source"]) for bucket in manifest["buckets"]]
-        apps = [app["Name"] for app in manifest["apps"]]
+        apps = [App(app["Name"]) for app in manifest["apps"]]
 
         return (buckets, apps)
 
 
-    def _add_missing_buckets(self, desired, installed):
-        to_install = desired.difference(installed)
-        self._log.debug(f'Installing buckets {", ".join(str(b) for b in to_install)}')
+    def _add_missing_buckets(self, to_add):
+        self._log.debug(f'Adding buckets [{", ".join(str(b) for b in to_add)}]')
 
         success = True
-        for bucket in to_install:
-            try:
-                if bucket.repo is not None:
-                    command = ['scoop bucket add', bucket.name, bucket.repo]
-                else:
-                    command = ['scoop bucket add', bucket.name]
-
-                subprocess.run(
-                        [' '.join(command)],
-                        shell=True,
-                        check=True)
-            except subprocess.CalledProcessError:
-                success = False
-
-        return success
-
-
-    def _add_missing_apps(self, desired, installed):
-        to_install = desired.difference(installed)
-        self._log.debug(f'Installing apps [{", ".join(to_install)}]')
-
-        success = True
-        for app in to_install:
-            try:
-                command = ['scoop install', app]
-
-                subprocess.run(
-                        [' '.join(command)],
-                        shell=True,
-                        check=True)
-            except subprocess.CalledProcessError:
-                success = False
-
-        return success
-
-
-    def _parse_buckets(self, buckets):
-        parsed_buckets = []
-        for bucket in buckets:
-            if isinstance(bucket, str):
-                parsed_buckets.append(Bucket(bucket))
+        for bucket in to_add:
+            if bucket.repo is not None:
+                command = ['scoop bucket add', bucket.name, bucket.repo]
             else:
-                parsed_buckets.append(Bucket(bucket["name"], bucket["repo"]))
-        return parsed_buckets
+                command = ['scoop bucket add', bucket.name]
+
+            try:
+                subprocess.run(
+                        [' '.join(command)],
+                        shell=True,
+                        check=True)
+            except subprocess.CalledProcessError:
+                self._log.error(f"Failed to add bucket {bucket} by running the command {command}")
+                success = False
+
+        return success
+
+
+    def _add_missing_apps(self, to_add):
+        self._log.debug(f'Adding apps [{", ".join(str(a) for a in to_add)}]')
+
+        success = True
+        for app in to_add:
+            command = ['scoop install', app]
+
+            try:
+                subprocess.run(
+                        [' '.join(command)],
+                        shell=True,
+                        check=True)
+            except subprocess.CalledProcessError:
+                self._log.error(f"Failed to add app {app} by running the command {command}")
+                success = False
+
+        return success
 
 
     def can_handle(self, directive):
@@ -105,24 +148,21 @@ class Scoop(dotbot.Plugin):
             raise ValueError('scoop cannot handle directive %s' %
                 directive)
 
-        desired_buckets = self._parse_buckets(data['buckets'])
+        desired_buckets = _parse_buckets_config(data['buckets'])
+        desired_apps = _parse_apps_config(data['apps'])
 
         manifest = self._manifest()
         if not manifest:
             return False
         (installed_buckets, installed_apps) = manifest
-        self._log.debug(f'Found buckets [{", ".join(str(b) for b in installed_buckets)}] already configured and apps [{", ".join(installed_apps)}] already installed')
-        self._log.debug(f'Aiming for buckets [{", ".join(set(str(b) for b in desired_buckets))}] to be configured and apps [{", ".join(set(data["apps"]))}] to be installed')
+        self._log.debug(f'Found buckets [{", ".join(str(b) for b in installed_buckets)}] already configured and apps [{", ".join(str(a) for a in installed_apps)}] already installed')
+        self._log.debug(f'Aiming for buckets [{", ".join(set(str(b) for b in desired_buckets))}] to be configured and apps [{", ".join(set(str(a) for a in desired_apps))}] to be installed')
 
-        if 'buckets' in data:
-            add_missing_bucket_success = self._add_missing_buckets(set(desired_buckets), set(installed_buckets))
-        else:
-            add_missing_bucket_success = True
+        buckets_to_add = _diff(desired_buckets, installed_buckets)
+        apps_to_add = _diff(desired_apps, installed_apps)
 
-        if 'apps' in data:
-            add_missing_app_success = self._add_missing_apps(set(data['apps']), set(installed_apps))
-        else:
-            add_missing_app_success = True
+        add_missing_bucket_success = self._add_missing_buckets(buckets_to_add)
+        add_missing_app_success = self._add_missing_apps(apps_to_add)
 
         if not add_missing_bucket_success or not add_missing_app_success:
             return False
@@ -133,21 +173,19 @@ class Scoop(dotbot.Plugin):
             return False
 
         (new_installed_buckets, new_installed_apps) = new_manifest
-        self._log.debug(f'New installed set of buckets [{", ".join(str(b) for b in new_installed_buckets)}] and apps [{", ".join(new_installed_apps)}]')
+        self._log.debug(f'New installed set of buckets [{", ".join(str(b) for b in new_installed_buckets)}] and apps [{", ".join(str(a) for a in new_installed_apps)}]')
 
-        if 'buckets' in data:
-            add_missing_bucket_success &= set(new_installed_buckets).issuperset(set(desired_buckets))
-        if 'apps' in data:
-            add_missing_app_success &= set(new_installed_apps).issuperset(set(data['apps']))
+        add_missing_bucket_verify = _verify(desired_buckets, new_installed_buckets)
+        add_missing_app_verify = _verify(desired_apps, new_installed_apps)
 
-        if add_missing_bucket_success:
+        if add_missing_bucket_verify:
             self._log.info('All buckets have been added')
         else:
             self._log.error('Some buckets were not successfully added')
 
-        if add_missing_app_success:
-            self._log.info('All apps have been installed')
+        if add_missing_app_verify:
+            self._log.info('All apps have been added')
         else:
-            self._log.error('Some apps were not successfully installed')
+            self._log.error('Some apps were not successfully added')
 
         return add_missing_bucket_success and add_missing_app_success
