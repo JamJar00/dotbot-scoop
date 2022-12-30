@@ -25,6 +25,8 @@ git submodule add https://github.com/JamJar00/dotbot-scoop.git
 - scoop:
     buckets:
       - extras
+      - name: nerd-fonts
+        repo: https://github.com/matthewjberger/scoop-nerd-fonts
       ...
     apps:
       - firefox
