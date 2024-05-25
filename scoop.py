@@ -1,5 +1,6 @@
 import dotbot
 import json
+import shutil
 import subprocess
 
 
@@ -75,17 +76,25 @@ def _verify(desired, installed):
 class Scoop(dotbot.Plugin):
     _directive = 'scoop'
 
+    # Windows can't just find 'scoop' (probably because the actual
+    # executable is scoop.CMD) unless you enable shell=True which causes
+    # issues on Linux. We resolve the executable to its full path here for
+    # later use when we want to call it
+    _executable = shutil.which("scoop")
+
     def _manifest(self):
-        command = ['scoop', 'export']
+        command = [self._executable, 'export']
         try:
             res = subprocess.run(
                 command,
-                shell=True,
                 check=True,
                 stdout=subprocess.PIPE)
             manifest = json.loads(res.stdout)
         except subprocess.CalledProcessError:
             self._log.error(f'Unable to extract manifest from scoop running command "{command}"')
+            return False
+        except json.JSONDecodeError:
+            self._log.error(f'Unable to parse manifest returned from scoop as json after running command "{command}".')
             return False
 
         buckets = [Bucket(bucket["Name"], bucket["Source"]) for bucket in manifest["buckets"]]
@@ -99,14 +108,13 @@ class Scoop(dotbot.Plugin):
         success = True
         for bucket in to_add:
             if bucket.repo is not None:
-                command = ['scoop', 'bucket', 'add', bucket.name, bucket.repo]
+                command = [self._executable, 'bucket', 'add', bucket.name, bucket.repo]
             else:
-                command = ['scoop', 'bucket', 'add', bucket.name]
+                command = [self._executable, 'bucket', 'add', bucket.name]
 
             try:
                 subprocess.run(
                     command,
-                    shell=True,
                     check=True)
             except subprocess.CalledProcessError:
                 self._log.error(f"Failed to add bucket {bucket} by running the command {command}")
@@ -119,12 +127,11 @@ class Scoop(dotbot.Plugin):
 
         success = True
         for app in to_add:
-            command = ['scoop', 'install', app.name]
+            command = [self._executable, 'install', app.name]
 
             try:
                 subprocess.run(
                     command,
-                    shell=True,
                     check=True)
             except subprocess.CalledProcessError:
                 self._log.error(f"Failed to add app {app} by running the command {command}")
