@@ -76,7 +76,7 @@ class Scoop(dotbot.Plugin):
     _directive = 'scoop'
 
     def _manifest(self):
-        command = 'scoop export'
+        command = ['scoop', 'export']
         try:
             res = subprocess.run(
                 command,
@@ -99,13 +99,13 @@ class Scoop(dotbot.Plugin):
         success = True
         for bucket in to_add:
             if bucket.repo is not None:
-                command = ['scoop bucket add', bucket.name, bucket.repo]
+                command = ['scoop', 'bucket', 'add', bucket.name, bucket.repo]
             else:
-                command = ['scoop bucket add', bucket.name]
+                command = ['scoop', 'bucket', 'add', bucket.name]
 
             try:
                 subprocess.run(
-                    [' '.join(command)],
+                    command,
                     shell=True,
                     check=True)
             except subprocess.CalledProcessError:
@@ -115,15 +115,15 @@ class Scoop(dotbot.Plugin):
         return success
 
     def _add_missing_apps(self, to_add):
-        self._log.debug(f'Adding apps [{", ".join(str(a) for a in to_add)}]')
+        self._log.debug(f'Adding apps [{", ".join(a.name for a in to_add)}]')
 
         success = True
         for app in to_add:
-            command = ['scoop install', app]
+            command = ['scoop', 'install', app.name]
 
             try:
                 subprocess.run(
-                    [' '.join(command)],
+                    command,
                     shell=True,
                     check=True)
             except subprocess.CalledProcessError:
@@ -141,6 +141,10 @@ class Scoop(dotbot.Plugin):
 
         desired_buckets = _parse_buckets_config(data['buckets'])
         desired_apps = _parse_apps_config(data['apps'])
+
+        if data is None:
+            self._log.error('No buckets nor apps configured for the scoop directive to install (have you indented them correctly?)')
+            return False
 
         manifest = self._manifest()
         if not manifest:
